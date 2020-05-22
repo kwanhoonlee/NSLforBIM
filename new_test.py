@@ -5,8 +5,8 @@ import neural_structured_learning as nsl
 import tensorflow as tf
 
 ### Experiment dataset
-TRAIN_DATA_PATH = './data/train_samples.tfr'
-TEST_DATA_PATH = './data/test_samples.tfr'
+TRAIN_DATA_PATH = './data/testdataset.tfr'
+TEST_DATA_PATH = './data/testdataset_test.tfr'
 
 ### Constants used to identify neighbor features in the input.
 NBR_FEATURE_PREFIX = 'NL_nbr_'
@@ -17,7 +17,7 @@ class HParams(object):
   def __init__(self):
     ### dataset parameters
     self.num_classes = 3
-    self.max_seq_length = 3
+    self.max_seq_length = 7
     ### neural graph learning parameters
     self.distance_type = nsl.configs.DistanceType.L2
     self.graph_regularization_multiplier = 0.1
@@ -48,30 +48,45 @@ def parse_example(example_proto):
   # original raw text. A default value is required for examples that don't
   # have the feature.
   feature_spec = {
-      'words':
-          tf.io.FixedLenFeature([HPARAMS.max_seq_length],
-                                tf.int64,
-                                default_value=tf.constant(
-                                    0,
-                                    dtype=tf.int64,
-                                    shape=[HPARAMS.max_seq_length])),
+      # 'words':
+      #     tf.io.FixedLenFeature([HPARAMS.max_seq_length],
+      #                           tf.float32,
+      #                           default_value=tf.constant(
+      #                               0,
+      #                               dtype=tf.float32,
+      #                               shape=[HPARAMS.max_seq_length])),
+      'x':
+          tf.io.FixedLenFeature((), tf.float32, default_value=-1),
+      'y':
+          tf.io.FixedLenFeature((), tf.float32, default_value=-1),
+      'z':
+          tf.io.FixedLenFeature((), tf.float32, default_value=-1),
+      'a':
+          tf.io.FixedLenFeature((), tf.float32, default_value=-1),
+      'ax':
+          tf.io.FixedLenFeature((), tf.float32, default_value=-1),
+      'ax2':
+          tf.io.FixedLenFeature((), tf.float32, default_value=-1),
+      'v':
+          tf.io.FixedLenFeature((), tf.float32, default_value=-1),
       'label':
           tf.io.FixedLenFeature((), tf.int64, default_value=-1),
   }
+  print(feature_spec)
   # We also extract corresponding neighbor features in a similar manner to
   # the features above.
   for i in range(HPARAMS.num_neighbors):
-    nbr_feature_key = '{}{}_{}'.format(NBR_FEATURE_PREFIX, i, 'words')
+    nbr_feature_key = '{}{}_{}'.format(NBR_FEATURE_PREFIX, i, 'a')
+    print('nbr_feature_key:', nbr_feature_key )
     nbr_weight_key = '{}{}{}'.format(NBR_FEATURE_PREFIX, i, NBR_WEIGHT_SUFFIX)
-    feature_spec[nbr_feature_key] = tf.io.FixedLenFeature(
-        [HPARAMS.max_seq_length],
-        tf.int64,
-        default_value=tf.constant(
-            0, dtype=tf.int64, shape=[HPARAMS.max_seq_length]))
+    print('nbr_weight_key:', nbr_weight_key)
+    feature_spec[nbr_feature_key] =tf.io.FixedLenFeature((), tf.float32, default_value=-1)
+    print(feature_spec[nbr_feature_key])
 
     # We assign a default value of 0.0 for the neighbor weight so that
     # graph regularization is done on samples based on their exact number
     # of neighbors. In other words, non-existent neighbors are discounted.
+
     feature_spec[nbr_weight_key] = tf.io.FixedLenFeature(
         [1], tf.float32, default_value=tf.constant([0.0]))
 
@@ -93,6 +108,7 @@ def make_dataset(file_path, training=False):
     objects.
   """
   dataset = tf.data.TFRecordDataset([file_path])
+  print("dataset:", dataset)
   if training:
     dataset = dataset.shuffle(10000)
   dataset = dataset.map(parse_example)
@@ -103,26 +119,26 @@ def make_dataset(file_path, training=False):
 train_dataset = make_dataset(TRAIN_DATA_PATH, training=True)
 test_dataset = make_dataset(TEST_DATA_PATH)
 
-
-for feature_batch, label_batch in train_dataset.take(1):
-  print('Feature list:', list(feature_batch.keys()))
-  print('Batch of inputs:', feature_batch['words'])
-  nbr_feature_key = '{}{}_{}'.format(NBR_FEATURE_PREFIX, 0, 'words')
-  nbr_weight_key = '{}{}{}'.format(NBR_FEATURE_PREFIX, 0, NBR_WEIGHT_SUFFIX)
-  print('Batch of neighbor inputs:', feature_batch[nbr_feature_key])
-  print('Batch of neighbor weights:',
-        tf.reshape(feature_batch[nbr_weight_key], [-1]))
-  print('Batch of labels:', label_batch)
-
-for feature_batch, label_batch in test_dataset.take(1):
-  print('Feature list:', list(feature_batch.keys()))
-  print('Batch of inputs:', feature_batch['words'])
-  nbr_feature_key = '{}{}_{}'.format(NBR_FEATURE_PREFIX, 0, 'words')
-  nbr_weight_key = '{}{}{}'.format(NBR_FEATURE_PREFIX, 0, NBR_WEIGHT_SUFFIX)
-  print('Batch of neighbor inputs:', feature_batch[nbr_feature_key])
-  print('Batch of neighbor weights:',
-        tf.reshape(feature_batch[nbr_weight_key], [-1]))
-  print('Batch of labels:', label_batch)
+#
+# for feature_batch, label_batch in train_dataset.take(1):
+#   print('Feature list:', list(feature_batch.keys()))
+#   print('Batch of inputs:', feature_batch['words'])
+#   nbr_feature_key = '{}{}_{}'.format(NBR_FEATURE_PREFIX, 0, 'words')
+#   nbr_weight_key = '{}{}{}'.format(NBR_FEATURE_PREFIX, 0, NBR_WEIGHT_SUFFIX)
+#   print('Batch of neighbor inputs:', feature_batch[nbr_feature_key])
+#   print('Batch of neighbor weights:',
+#         tf.reshape(feature_batch[nbr_weight_key], [-1]))
+#   print('Batch of labels:', label_batch)
+#
+# for feature_batch, label_batch in test_dataset.take(1):
+#   print('Feature list:', list(feature_batch.keys()))
+#   print('Batch of inputs:', feature_batch['words'])
+#   nbr_feature_key = '{}{}_{}'.format(NBR_FEATURE_PREFIX, 0, 'words')
+#   nbr_weight_key = '{}{}{}'.format(NBR_FEATURE_PREFIX, 0, NBR_WEIGHT_SUFFIX)
+#   print('Batch of neighbor inputs:', feature_batch[nbr_feature_key])
+#   print('Batch of neighbor weights:',
+#         tf.reshape(feature_batch[nbr_weight_key], [-1]))
+#   print('Batch of labels:', label_batch)
 
 
 def make_mlp_sequential_model(hparams):
@@ -130,7 +146,7 @@ def make_mlp_sequential_model(hparams):
   model = tf.keras.Sequential()
   model.add(
       tf.keras.layers.InputLayer(
-          input_shape=(hparams.max_seq_length,), name='words'))
+          input_shape=(hparams.max_seq_length,), )) #name='words'
   # Input is already one-hot encoded in the integer format. We cast it to
   # floating point format here.
   model.add(
@@ -146,7 +162,7 @@ def make_mlp_sequential_model(hparams):
 def make_mlp_functional_model(hparams):
   """Creates a functional API-based multi-layer perceptron model."""
   inputs = tf.keras.Input(
-      shape=(hparams.max_seq_length,), dtype='int64', name='words')
+      shape=(1,), dtype='int64', name='a') # name='words'
 
   # Input is already one-hot encoded in the integer format. We cast it to
   # floating point format here.
@@ -243,3 +259,8 @@ graph_reg_model.compile(
     loss='sparse_categorical_crossentropy',
     metrics=['accuracy'])
 graph_reg_model.fit(train_dataset, epochs=HPARAMS.train_epochs, verbose=1)
+
+eval_results = dict(
+    zip(graph_reg_model.metrics_names,
+        graph_reg_model.evaluate(test_dataset, steps=HPARAMS.eval_steps)))
+print_metrics('MLP + graph regularization', eval_results)

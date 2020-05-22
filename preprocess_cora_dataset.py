@@ -94,6 +94,9 @@ def _int64_feature(*value):
   """Returns int64 tf.train.Feature from a bool / enum / int / uint."""
   return tf.train.Feature(int64_list=tf.train.Int64List(value=list(value)))
 
+def _float_feature(value):
+  """Returns a float_list from a float / double."""
+  return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
 
 def _bytes_feature(value):
   """Returns bytes tf.train.Feature from a string."""
@@ -121,16 +124,16 @@ def parse_cora_content(in_file, train_percentage):
   """
   # Provides a mapping from string labels to integer indices.
   label_index = {
-      'Case_Based': 0,
-      'Genetic_Algorithms': 1,
-      'Neural_Networks': 2,
-      'Probabilistic_Methods': 3,
-      'Reinforcement_Learning': 4,
-      'Rule_Learning': 5,
-      'Theory': 6,
-      # 'IfcWindow':0,
-      # 'IfcWallStandardCase':1,
-      # 'IfcDoor':2
+      # 'Case_Based': 0,
+      # 'Genetic_Algorithms': 1,
+      # 'Neural_Networks': 2,
+      # 'Probabilistic_Methods': 3,
+      # 'Reinforcement_Learning': 4,
+      # 'Rule_Learning': 5,
+      # 'Theory': 6,
+      'IfcColumn':0,
+      'IfcWallStandardCase':1,
+      'IfcDoor':2
   }
   # Fixes the random seed so the train/test split can be reproduced.
   random.seed(1)
@@ -140,15 +143,35 @@ def parse_cora_content(in_file, train_percentage):
     for line in cora_content:
       entries = line.rstrip('\n').split('\t')
       # entries contains [ID, Word1, Word2, ..., Label]; 'Words' are 0/1 values.
-      words = map(int, entries[1:-1])
+      print("entries", entries)
+      x = float(entries[1])
+      y = float(entries[2])
+      z = float(entries[3])
+      a = float(entries[4])
+      ax = float(entries[5])
+      ax2 = float(entries[6])
+      v = float(entries[7])
+
+      # words = map(float, entries[1:-1])
       example_id = entries[0]
+
       features = {
           'id': _bytes_feature(example_id),
-          'words': _int64_feature(*words),
+          'x': _float_feature(x),
+          'y': _float_feature(y),
+          'z': _float_feature(z),
+          'a': _float_feature(a),
+          'ax': _float_feature(ax),
+          'ax2': _float_feature(ax2),
+          'v': _float_feature(v),
+          # 'words': _int64_feature(*words),
+          # 'X':
+          # 'words': _float_feature(*words),
           'label': _int64_feature(label_index[entries[-1]]),
       }
       example_features = tf.train.Example(
           features=tf.train.Features(feature=features))
+      print('example_features ',example_features )
       if random.uniform(0, 1) <= train_percentage:  # for train/test split.
         train_examples[example_id] = example_features
       else:
@@ -160,7 +183,7 @@ def parse_cora_content(in_file, train_percentage):
 def _join_examples(seed_exs, nbr_exs, graph, max_nbrs):
   r"""Joins the `seeds` and `nbrs` Examples using the edges in `graph`.
 
-  This generator joins and augments each labeled Example in `seed_exs` with the
+  This gene ratorjoins and augments each labeled Example in `seed_exs` with the
   features of at most `max_nbrs` of the seed's neighbors according to the given
   `graph`, and yields each merged result.
 
@@ -265,7 +288,7 @@ def main(unused_argv):
   # Parses Cora content into TF Examples.
   train_examples, test_examples = parse_cora_content(FLAGS.input_cora_content,
                                                      FLAGS.train_percentage)
-
+  print(test_examples, test_examples)
   graph = graph_utils.read_tsv_graph(FLAGS.input_cora_graph)
   graph_utils.add_undirected_edges(graph)
 
