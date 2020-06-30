@@ -1,8 +1,10 @@
 # Created by kwanhoon on 15/05/2020
+import tensorflow as tf
+tf.enable_eager_execution()
 
 import neural_structured_learning as nsl
 
-import tensorflow as tf
+
 
 ### Experiment dataset
 TRAIN_DATA_PATH = './data/train.tfr'
@@ -87,6 +89,7 @@ def parse_example(example_proto):
   return features, label
 
 
+
 def make_dataset(file_path, training=False):
   """Creates a `tf.data.TFRecordDataset`.
 
@@ -107,10 +110,8 @@ def make_dataset(file_path, training=False):
   dataset = dataset.batch(HPARAMS.batch_size)
   return dataset
 
-
 train_dataset = make_dataset(TRAIN_DATA_PATH, training=True)
 test_dataset = make_dataset(TEST_DATA_PATH)
-
 
 for feature_batch, label_batch in train_dataset.take(3):
   print('Feature list:', list(feature_batch.keys()))
@@ -122,7 +123,7 @@ for feature_batch, label_batch in train_dataset.take(3):
         tf.reshape(feature_batch[nbr_weight_key], [-1]))
   print('Batch of labels:', label_batch)
 
-for feature_batch, label_batch in test_dataset.take(2):
+for feature_batch, label_batch in test_dataset.take(1000):
   print('Feature list:', list(feature_batch.keys()))
   print('Batch of inputs:', feature_batch['beam_features'])
   nbr_feature_key = '{}{}_{}'.format(NBR_FEATURE_PREFIX, 0, 'beam_features')
@@ -131,6 +132,7 @@ for feature_batch, label_batch in test_dataset.take(2):
   print('Batch of neighbor weights:',
         tf.reshape(feature_batch[nbr_weight_key], [-1]))
   print('Batch of labels:', label_batch)
+
 
 
 def make_mlp_sequential_model(hparams):
@@ -217,7 +219,7 @@ base_model.compile(
     loss='sparse_categorical_crossentropy',
     metrics=['accuracy'])
 base_model.fit(train_dataset, epochs=HPARAMS.train_epochs, verbose=1)
-
+base_model.save('./model/baseline.h5')
 # Helper function to print evaluation metrics.
 def print_metrics(model_desc, eval_metrics):
   """Prints evaluation metrics.
@@ -228,7 +230,7 @@ def print_metrics(model_desc, eval_metrics):
       must contain the loss and accuracy metrics.
   """
   print('\n')
-  print('Eval accuracy for ', model_desc, ': ', eval_metrics['accuracy'])
+  print('Eval accuracy for ', model_desc, ': ', eval_metrics['acc'])
   print('Eval loss for ', model_desc, ': ', eval_metrics['loss'])
   if 'graph_loss' in eval_metrics:
     print('Eval graph loss for ', model_desc, ': ', eval_metrics['graph_loss'])
@@ -238,9 +240,9 @@ eval_results = dict(
         base_model.evaluate(test_dataset, steps=HPARAMS.eval_steps)))
 print_metrics('Base MLP model', eval_results)
 
+
 # Build a new base MLP model.
-base_reg_model_tag, base_reg_model = 'FUNCTIONAL', make_mlp_functional_model(
-    HPARAMS)
+base_reg_model_tag, base_reg_model = 'FUNCTIONAL', make_mlp_functional_model(HPARAMS)
 
 graph_reg_config = nsl.configs.make_graph_reg_config(
     max_neighbors=HPARAMS.num_neighbors,
@@ -253,11 +255,39 @@ graph_reg_model.compile(
     optimizer='adam',
     loss='sparse_categorical_crossentropy',
     metrics=['accuracy'])
-graph_reg_model.fit(train_dataset, epochs=HPARAMS.train_epochs, verbose=1)
+# graph_reg_model.fit(train_dataset, epochs=HPARAMS.train_epochs, verbose=1)
+graph_reg_model.fit(train_dataset, epochs=1, verbose=1)
+graph_reg_model.save_weights('./model/graph.h5')
 
 eval_results = dict(
     zip(graph_reg_model.metrics_names,
         graph_reg_model.evaluate(test_dataset, steps=HPARAMS.eval_steps)))
 print_metrics('MLP + graph regularization', eval_results)
+
+
+# generate results
+import pandas as pd
+import numpy as np
+
+results = base_model.predict(test_dataset)
+pd.DataFrame(results).to_csv('./results/baseline/prob.csv')
+y_pred = []
+y_true = []
+
+for i in range(len(results)):
+    y_pred.append(np.argmax(results[i], axis=0))
+
+
+for feature_batch, label_batch in test_dataset.take(len(results)):
+    # print(feature_batch['beam_features'].numpy())
+    # print('Batch of labels:', label_batch.numpy()[0])
+    y_true.append(label_batch.numpy()[0])
+
+
+labels = pd.DataFrame([y_true, y_pred]).T
+labels.columns = ['y_true', 'y_pred']
+labels.to_csv('./results/baseline/labels.csv')
+
+
 
 

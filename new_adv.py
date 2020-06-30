@@ -52,12 +52,14 @@ def make_mlp_functional_model(hparams):
   return model
 
 df = pd.read_csv('./data/contents.csv', index_col=0, header=None)
-X = df[range(1,9)]
+
+X = df[df.columns.values[:8]]
 Y = df[9]
 enc = LabelEncoder()
+enc.classes_
 Y = enc.fit_transform(Y.values).reshape(-1,1)
 
-X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=0)
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2075, random_state=0)
 
 base_model = make_mlp_functional_model(HPARAMS)
 
@@ -71,3 +73,20 @@ adv_model.compile(optimizer='adam',
 
 adv_model.fit({'feature': X_train.values, 'label': Y_train}, batch_size=1, epochs=100)
 adv_model.evaluate({'feature': X_test.values, 'label': Y_test})
+adv_model.save_weights('./model/adv.h5')
+results = adv_model.predict({'feature':X_test.values, 'label': Y_test})
+#
+import pandas as pd
+import numpy as np
+#
+# results = base_model.predict(test_dataset)
+pd.DataFrame(results).to_csv('./results/adv/prob.csv')
+y_pred = []
+y_true = Y_test.reshape(-1)
+
+for i in range(len(results)):
+    y_pred.append(np.argmax(results[i], axis=0))
+
+labels = pd.DataFrame([y_true, y_pred]).T
+labels.columns = ['y_true', 'y_pred']
+labels.to_csv('./results/adv/labels.csv')

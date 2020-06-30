@@ -1,0 +1,28 @@
+Eval accuracy for  Base MLP model :  0.8965517
+Eval loss for  Base MLP model :  0.26050026710993984
+
+labels
+      'IfcBeam':0,
+      'IfcColumn':1,
+      'IfcCovering':2,
+      'IfcDoor':3,
+      'IfcRailing':4,
+      'IfcSlab':5,
+      'IfcWallStandardCase':6,
+      'IfcWindow':7
+
+                precision    recall  f1-score   support
+           0       0.99      0.91      0.95       198
+           1       0.96      1.00      0.98        52
+           2       0.25      0.50      0.33         4
+           3       1.00      0.56      0.72        80
+           4       0.00      0.00      0.00         0
+           5       0.98      0.95      0.96       124
+           6       0.81      0.99      0.89       151
+           7       0.00      0.00      0.00         0
+    accuracy                           0.90       609
+   macro avg       0.62      0.61      0.60       609
+weighted avg       0.94      0.90      0.91       609
+
+
+Average precision score, micro-averaged over all classes: 0.88
